@@ -22,7 +22,10 @@ while eval $readopt; do
       ;;
     d)
       opt_root_folder=$OPTARG
-      echo $opt_root_folder
+      if [ ! -d "$opt_root_folder" ]; then
+        echo -e "Root output folder, $opt_root_folder, does not exist."
+        exit 1
+      fi
       ;;
   esac
 done
@@ -40,14 +43,30 @@ for disk in $(diskutil list | grep ^/); do
   fi
 done
 
-if [ -n "$mount_point" ]; then
-  echo -e "\tOptical Disk:\t$mount_point"
-  echo -e "\tVolume Name:\t$volume_name"
+echo "cp-optical"
 
+if [ -n "$mount_point" ]; then
   destination_folder="`eval echo $volume_name`"
+  if [ -n "$opt_root_folder" ]; then
+    destination_folder=$opt_root_folder/$destination_folder
+  else
+    destination_folder="`pwd`"/$destination_folder
+  fi
+
+  shopt -s extglob
+  destination_folder="${destination_folder//+(\/)//}"
+  shopt -u extglob
+
+  output_format="\t%-19s %s\n"
+
+  printf "$output_format" "Mount point:" "$mount_point"
+  printf "$output_format" "Volume name:" "$volume_name"
+  printf "$output_format" "Destination folder:" "$destination_folder"
 
   mkdir "$destination_folder"
-  ditto -v "$mount_point" "$destination_folder"
+  ditto "$mount_point" "$destination_folder"
   
   diskutil eject "$mount_point"
+else
+  echo -e "\tNo optical disc found."
 fi
