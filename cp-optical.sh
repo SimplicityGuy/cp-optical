@@ -57,7 +57,7 @@ if [ -n "$mount_point" ]; then
   destination_folder="${destination_folder//+(\/)//}"
   shopt -u extglob
 
-  output_format="\t%-19s %s\n"
+  output_format="\t%-20s %s\n"
 
   printf "$output_format" "Mount point:" "$mount_point"
   printf "$output_format" "Volume name:" "$volume_name"
