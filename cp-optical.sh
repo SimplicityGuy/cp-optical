@@ -1,7 +1,11 @@
 #!/bin/bash
 
 usage() {
-  echo -e "Usage: $0 [arguments] \n"
+  echo -e "Usage: cp-optical.sh [ <options> ]\n"
+  echo -e "    <options> are any of:"
+  echo -e "    -h\t\tprint full usage"
+  echo -e "    -d\t\tpath to destination root"
+  echo -e "    \t\tif not provided, current directory is used"
 }
 
 if [[ "$(uname)" != "Darwin" ]]; then
@@ -31,42 +35,46 @@ while eval $readopt; do
 done
 
 # Retrieves the first mount point and device node of a CD/DVD/BD.
-device_node=
-mount_point=
-volume_name=
+dev_node=
+mnt_point=
+vol_name=
 for disk in $(diskutil list | grep ^/); do
   if diskutil info "$disk" | grep -q Optical; then
-    device_node=$disk
-    mount_point=`df | sed -ne "s,^$disk.*\(/Volumes.*\)$,\1,p"`
-    volume_name=`echo $mount_point | sed "s,^/Volumes/,,"`
+    dev_node=$disk
+    mnt_point=`df | sed -ne "s,^$disk.*\(/Volumes.*\)$,\1,p"`
+    vol_name=`echo $mnt_point | sed "s,^/Volumes/,,"`
     break
   fi
 done
 
 echo "cp-optical"
 
-if [ -n "$mount_point" ]; then
-  destination_folder="`eval echo $volume_name`"
-  if [ -n "$opt_root_folder" ]; then
-    destination_folder=$opt_root_folder/$destination_folder
-  else
-    destination_folder="`pwd`"/$destination_folder
-  fi
-
-  shopt -s extglob
-  destination_folder="${destination_folder//+(\/)//}"
-  shopt -u extglob
-
-  output_format="\t%-20s %s\n"
-
-  printf "$output_format" "Mount point:" "$mount_point"
-  printf "$output_format" "Volume name:" "$volume_name"
-  printf "$output_format" "Destination folder:" "$destination_folder"
-
-  mkdir "$destination_folder"
-  ditto "$mount_point" "$destination_folder"
-  
-  diskutil eject "$mount_point"
-else
+if [ -z "$mnt_point" ]; then
   echo -e "\tNo optical disc found."
+  exit 1
 fi
+
+dst_folder="`eval echo $vol_name`"
+if [ -n "$opt_root_folder" ]; then
+  dst_folder=$opt_root_folder/$dst_folder
+else
+  dst_folder="`pwd`"/$dst_folder
+fi
+
+shopt -s extglob
+dst_folder="${dst_folder//+(\/)//}"
+shopt -u extglob
+
+output_format="\t%-20s %s\n"
+
+printf "$output_format" "Mount point:" "$mnt_point"
+printf "$output_format" "Volume name:" "$vol_name"
+printf "$output_format" "Destination folder:" "$dst_folder"
+
+if [ ! -d "$dst_folder" ]; then
+  mkdir "$dst_folder"
+fi
+
+ditto "$mnt_point" "$dst_folder"
+
+diskutil eject "$mnt_point"
