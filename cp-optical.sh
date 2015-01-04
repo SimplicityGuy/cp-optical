@@ -6,6 +6,7 @@ usage() {
   echo -e "    -h\t\tprint full usage"
   echo -e "    -d\t\tpath to destination root"
   echo -e "    \t\tif not provided, current directory is used"
+  echo -e "    -m\t\tcopy multiple optical discs"
 }
 
 if [[ "$(uname)" != "Darwin" ]]; then
@@ -15,8 +16,9 @@ fi
 
 OPTIND=1
 readopt='getopts $opts opt; rc=$?; [ $rc$opt == 0? ] && exit 1; [ $rc == 0 ] || { shift $[OPTIND - 1]; false; }'
-opts=hd:
+opts=hdm:
 opt_root_folder=
+loop=false
 
 while eval $readopt; do
   case "$opt" in
@@ -31,50 +33,67 @@ while eval $readopt; do
         exit 1
       fi
       ;;
+    m)
+      loop=true
+      ;;
   esac
-done
-
-# Retrieves the first mount point and device node of a CD/DVD/BD.
-dev_node=
-mnt_point=
-vol_name=
-for disk in $(diskutil list | grep ^/); do
-  if diskutil info "$disk" | grep -q Optical; then
-    dev_node=$disk
-    mnt_point=`df | sed -ne "s,^$disk.*\(/Volumes.*\)$,\1,p"`
-    vol_name=`echo $mnt_point | sed "s,^/Volumes/,,"`
-    break
-  fi
 done
 
 echo "cp-optical"
 
-if [ -z "$mnt_point" ]; then
-  echo -e "\tNo optical disc found."
-  exit 1
-fi
+while [ : ]; do
+  
+  while [ : ]; do
+    diskutil list | grep "Optical" >/dev/null 2>&1
+    [ "$?" = "0" ] && break
+    printf "Waiting for optical disc to be inserted..."
+    sleep 3
+  done
 
-dst_folder="`eval echo $vol_name`"
-if [ -n "$opt_root_folder" ]; then
-  dst_folder=$opt_root_folder/$dst_folder
-else
-  dst_folder="`pwd`"/$dst_folder
-fi
+  # Retrieves the first mount point and device node of a CD/DVD/BD.
+  dev_node=
+  mnt_point=
+  vol_name=
+  for disk in $(diskutil list | grep ^/); do
+    if diskutil info "$disk" | grep -q Optical; then
+      dev_node=$disk
+      mnt_point=`df | sed -ne "s,^$disk.*\(/Volumes.*\)$,\1,p"`
+      vol_name=`echo $mnt_point | sed "s,^/Volumes/,,"`
+      break
+    fi
+  done
 
-shopt -s extglob
-dst_folder="${dst_folder//+(\/)//}"
-shopt -u extglob
+  if [ -z "$mnt_point" ]; then
+    echo -e "\tNo optical disc found."
+    exit 1
+  fi
 
-output_format="\t%-20s %s\n"
+  dst_folder="`eval echo $vol_name`"
+  if [ -n "$opt_root_folder" ]; then
+    dst_folder=$opt_root_folder/$dst_folder
+  else
+    dst_folder="`pwd`"/$dst_folder
+  fi
 
-printf "$output_format" "Mount point:" "$mnt_point"
-printf "$output_format" "Volume name:" "$vol_name"
-printf "$output_format" "Destination folder:" "$dst_folder"
+  shopt -s extglob
+  dst_folder="${dst_folder//+(\/)//}"
+  shopt -u extglob
 
-if [ ! -d "$dst_folder" ]; then
-  mkdir "$dst_folder"
-fi
+  output_format="\t%-20s %s\n"
 
-ditto "$mnt_point" "$dst_folder"
+  printf "$output_format" "Mount point:" "$mnt_point"
+  printf "$output_format" "Volume name:" "$vol_name"
+  printf "$output_format" "Destination folder:" "$dst_folder"
 
-diskutil eject "$mnt_point"
+  if [ ! -d "$dst_folder" ]; then
+    mkdir "$dst_folder"
+  fi
+
+  ditto "$mnt_point" "$dst_folder"
+
+  diskutil eject "$mnt_point"
+
+  if ! $loop; then 
+    break
+  fi
+done
