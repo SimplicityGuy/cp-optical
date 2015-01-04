@@ -7,6 +7,7 @@ usage() {
   echo -e "    -d\t\tpath to destination root"
   echo -e "    \t\tif not provided, current directory is used"
   echo -e "    -m\t\tcopy multiple optical discs"
+  echo -e "    -i\t\tinteractive mode during multiple optical disc copy"
 }
 
 if [[ "$(uname)" != "Darwin" ]]; then
@@ -16,9 +17,10 @@ fi
 
 OPTIND=1
 readopt='getopts $opts opt; rc=$?; [ $rc$opt == 0? ] && exit 1; [ $rc == 0 ] || { shift $[OPTIND - 1]; false; }'
-opts=hdm:
+opts=hdmi:
 opt_root_folder=
 loop=false
+interactive=false
 
 while eval $readopt; do
   case "$opt" in
@@ -35,6 +37,9 @@ while eval $readopt; do
       ;;
     m)
       loop=true
+      ;;
+    i)
+      interactive=true
       ;;
   esac
 done
@@ -95,5 +100,11 @@ while [ : ]; do
 
   if ! $loop; then 
     break
+  fi
+
+  if $interactive; then
+    read -p "Copy another disc? [Y|n] " _answer
+    echo ${_answer} | grep -E -i -e '^y$' > /dev/null 2>&1
+    [ "$?" != "0" ] && break
   fi
 done
