@@ -11,13 +11,13 @@ usage() {
 }
 
 if [[ "$(uname)" != "Darwin" ]]; then
-  echo "$0 currently only runs on Mac OS X."
+  echo "$0 currently only runs on Mac OS X.\n"
   exit 1
 fi
 
 OPTIND=1
 readopt='getopts $opts opt; rc=$?; [ $rc$opt == 0? ] && exit 1; [ $rc == 0 ] || { shift $[OPTIND - 1]; false; }'
-opts=hdmi:
+opts=himd:
 opt_root_folder=
 loop=false
 interactive=false
@@ -31,7 +31,7 @@ while eval $readopt; do
     d)
       opt_root_folder=$OPTARG
       if [ ! -d "$opt_root_folder" ]; then
-        echo -e "Root output folder, $opt_root_folder, does not exist."
+        echo -e "Root output folder, $opt_root_folder, does not exist.\n"
         exit 1
       fi
       ;;
@@ -39,6 +39,7 @@ while eval $readopt; do
       loop=true
       ;;
     i)
+      loop=true
       interactive=true
       ;;
   esac
@@ -48,10 +49,13 @@ echo "cp-optical"
 
 while [ : ]; do
   
-  while [ : ]; do
-    diskutil list | grep "Optical" >/dev/null 2>&1
-    [ "$?" = "0" ] && break
-    printf "Waiting for optical disc to be inserted..."
+  optical_found=false
+  while [ "$optical_found" = false ]; do
+    for disk in $(diskutil list | grep ^/); do
+      diskutil info "$disk" | grep -q Optical >/dev/null 2>&1
+      [ "$?" = "0" ] && optical_found=true && break
+    done
+    printf "Waiting for optical disc to be inserted...\n"
     sleep 3
   done
 
@@ -70,7 +74,6 @@ while [ : ]; do
 
   if [ -z "$mnt_point" ]; then
     echo -e "\tNo optical disc found."
-    exit 1
   fi
 
   dst_folder="`eval echo $vol_name`"
@@ -98,11 +101,11 @@ while [ : ]; do
 
   diskutil eject "$mnt_point"
 
-  if ! $loop; then 
+  if [ "$loop" != true ]; then 
     break
   fi
 
-  if $interactive; then
+  if [ "$interactive" = true ]; then
     read -p "Copy another disc? [Y|n] " _answer
     echo ${_answer} | grep -E -i -e '^y$' > /dev/null 2>&1
     [ "$?" != "0" ] && break
