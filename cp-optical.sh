@@ -107,6 +107,7 @@ while [ : ]; do
 
   if [ "$interactive" = true ]; then
     read -p "Copy another disc? [Y|n] " _answer
+    _answer=${_answer:-Y}
     echo ${_answer} | grep -E -i -e '^y$' > /dev/null 2>&1
     [ "$?" != "0" ] && break
   fi
