@@ -49,15 +49,18 @@ echo "cp-optical"
 
 while [ : ]; do
   
+  printf "Waiting for optical disc to be inserted..."
   optical_found=false
   while [ "$optical_found" = false ]; do
     for disk in $(diskutil list | grep ^/); do
+      printf "."
       diskutil info "$disk" | grep -q Optical >/dev/null 2>&1
       [ "$?" = "0" ] && optical_found=true && break
     done
-    printf "Waiting for optical disc to be inserted...\n"
+    printf "."
     sleep 3
   done
+  printf "\n"
 
   # Retrieves the first mount point and device node of a CD/DVD/BD.
   dev_node=
