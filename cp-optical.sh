@@ -65,22 +65,22 @@ while [ : ]; do
   vol_name=
   for disk in $(diskutil list | grep ^/); do
     if diskutil info "$disk" | grep -q Optical; then
-      dev_node=$disk
+      dev_node="$disk"
       mnt_point=`df | sed -ne "s,^$disk.*\(/Volumes.*\)$,\1,p"`
-      vol_name=`echo $mnt_point | sed "s,^/Volumes/,,"`
+      vol_name=`echo "$mnt_point" | sed "s,^/Volumes/,,"`
       break
     fi
   done
 
   if [ -z "$mnt_point" ]; then
-    echo -e "\tNo optical disc found."
+    echo -e "\tNo optical disc found.\n"
   fi
 
-  dst_folder="`eval echo $vol_name`"
+  dst_folder="$vol_name"
   if [ -n "$opt_root_folder" ]; then
-    dst_folder=$opt_root_folder/$dst_folder
+    dst_folder="$opt_root_folder"/"$dst_folder"
   else
-    dst_folder="`pwd`"/$dst_folder
+    dst_folder="`pwd`"/"$dst_folder"
   fi
 
   shopt -s extglob
